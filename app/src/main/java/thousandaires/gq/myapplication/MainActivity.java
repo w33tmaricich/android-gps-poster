@@ -2,15 +2,19 @@ package thousandaires.gq.myapplication;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.method.ScrollingMovementMethod;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
@@ -21,10 +25,20 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
+import java.util.LinkedList;
+import java.util.Queue;
+
+
 public class MainActivity extends AppCompatActivity {
     public double latitude;
     public double longitude;
     public RequestQueue queue;
+
+    private TextView textview;
+
+    private LinkedList<String> request_log;
+
+
 
 
     @Override
@@ -35,6 +49,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         queue = Volley.newRequestQueue(getApplicationContext());
+
+        request_log = new LinkedList();
 
         LocationManager mlocManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         LocationListener mlocListener = new MyLocationListener();
@@ -54,15 +70,34 @@ public class MainActivity extends AppCompatActivity {
             System.out.println("permissions error with location updates" + e.toString());
         }
 
+        textview = (TextView)findViewById(R.id.textview);
     }
+    public void renderLog() {
+        String text = "";
+        for (int i = 0; i < request_log.size(); i ++) {
+            text = text.concat(request_log.get(i));
+        }
+        textview.setText(text);
+
+    }
+
+    public void addToLog(String s) {
+        request_log.add(s);
+        if ( request_log.size() > 10 ) {
+            request_log.remove();
+        }
+    }
+
 
     public class MyLocationListener implements LocationListener {
         @Override
         public void onLocationChanged(Location loc) {
             latitude = loc.getLatitude();
             longitude = loc.getLongitude();
-            String Text = "Latitude = " + latitude  + " Longitude = " + longitude;
-            Toast.makeText(getApplicationContext(), Text, Toast.LENGTH_SHORT).show();
+            String text = "lat=" + latitude  + " lon=" + longitude + "\n";
+            //Toast.makeText(getApplicationContext(), Text, Toast.LENGTH_SHORT).show();
+            addToLog(text);
+            renderLog();
 
             String url = "http://thousandaires.gq/ingress?lat=" + latitude + "&lon=" + longitude;
 
@@ -74,7 +109,8 @@ public class MainActivity extends AppCompatActivity {
                     },
                     new Response.ErrorListener() {
                         public void onErrorResponse(VolleyError error) {
-                            Toast.makeText(getApplicationContext(), error.toString(), Toast.LENGTH_SHORT).show();
+                            addToLog(error.toString() + "\n");
+                            renderLog();
                         }
                     }
             );
@@ -117,7 +153,16 @@ public class MainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
             return true;
+        }
+        if (id == R.id.action_exit) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                this.finishAffinity();
+            } else {
+                this.finishActivity(0);
+            }
         }
 
         return super.onOptionsItemSelected(item);
