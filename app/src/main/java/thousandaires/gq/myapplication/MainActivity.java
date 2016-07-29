@@ -3,11 +3,14 @@ package thousandaires.gq.myapplication;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
+import android.preference.EditTextPreference;
+import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -29,6 +32,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 
+
 public class MainActivity extends AppCompatActivity {
     public double latitude;
     public double longitude;
@@ -36,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView textview;
 
-    private LinkedList<String> request_log;
+    //private LinkedList<String> request_log;
 
 
 
@@ -50,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
 
         queue = Volley.newRequestQueue(getApplicationContext());
 
-        request_log = new LinkedList();
+        //request_log = new LinkedList();
 
         LocationManager mlocManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         LocationListener mlocListener = new MyLocationListener();
@@ -72,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
 
         textview = (TextView)findViewById(R.id.textview);
     }
+    /*
     public void renderLog() {
         String text = "";
         for (int i = 0; i < request_log.size(); i ++) {
@@ -87,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
             request_log.remove();
         }
     }
+    */
 
 
     public class MyLocationListener implements LocationListener {
@@ -96,10 +102,18 @@ public class MainActivity extends AppCompatActivity {
             longitude = loc.getLongitude();
             String text = "lat=" + latitude  + " lon=" + longitude + "\n";
             //Toast.makeText(getApplicationContext(), Text, Toast.LENGTH_SHORT).show();
-            addToLog(text);
-            renderLog();
+            //addToLog(text);
+            //renderLog();
 
-            String url = "http://thousandaires.gq/ingress?lat=" + latitude + "&lon=" + longitude;
+
+            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+            String host_and_path = preferences.getString("pref_url", "http://thousandaires.gq:8080/incoming");
+
+
+            String queryString = "?lat=" + latitude + "&lng=" + longitude + "&device=phone";
+            String url = host_and_path + queryString;
+
+            textview.setText("sending request=" + url);
 
             StringRequest req = new StringRequest(Request.Method.GET, url,
                     new Response.Listener<String>() {
@@ -109,8 +123,9 @@ public class MainActivity extends AppCompatActivity {
                     },
                     new Response.ErrorListener() {
                         public void onErrorResponse(VolleyError error) {
-                            addToLog(error.toString() + "\n");
-                            renderLog();
+                            textview.setText(textview.getText() +"\nerror="+error.toString() + "\n");
+                            //addToLog(error.toString() + "\n");
+                            //renderLog();
                         }
                     }
             );
