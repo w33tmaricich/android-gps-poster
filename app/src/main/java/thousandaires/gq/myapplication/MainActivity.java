@@ -3,7 +3,10 @@ package thousandaires.gq.myapplication;
 import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.ComponentName;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.usb.UsbDevice;
@@ -13,11 +16,14 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Message;
 import android.preference.EditTextPreference;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.text.method.ScrollingMovementMethod;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -32,13 +38,16 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
+import java.lang.Thread;
+import java.lang.ref.WeakReference;
+
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Set;
 import java.util.HashMap;
 import java.util.Queue;
 
-
-
+import static java.lang.Thread.*;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -68,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
+    private UsbService usbService;
 
     public double latitude;
     public double longitude;
@@ -75,19 +85,31 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView textview;
 
-    private UsbService usbService;
+    private MyHandler mHandler;
+    private final ServiceConnection usbConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName arg0, IBinder arg1) {
+            usbService = ((UsbService.UsbBinder) arg1).getService();
+            usbService.setHandler(mHandler);
+        }
 
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            usbService = null;
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        System.out.println(usbService);
         super.onCreate(savedInstanceState);
 
         //ToggleButton toggle = (ToggleButton) findViewById(R.id.toggleButton);
         setContentView(R.layout.activity_main);
 
-        queue = Volley.newRequestQueue(getApplicationContext());
+        mHandler = new MyHandler(this);
 
-        usbService = new UsbService();
+        queue = Volley.newRequestQueue(getApplicationContext());
 
         //request_log = new LinkedList();
 
@@ -110,24 +132,72 @@ public class MainActivity extends AppCompatActivity {
         }
 
         textview = (TextView)findViewById(R.id.textview);
-    }
-    /*
-    public void renderLog() {
-        String text = "";
-        for (int i = 0; i < request_log.size(); i ++) {
-            text = text.concat(request_log.get(i));
-        }
-        textview.setText(text);
 
     }
 
-    public void addToLog(String s) {
-        request_log.add(s);
-        if ( request_log.size() > 10 ) {
-            request_log.remove();
+    @Override
+    public void onResume() {
+        super.onResume();
+        setFilters();  // Start listening notifications from UsbService
+        startService(UsbService.class, usbConnection, null); // Start UsbService(if it was not started before) and Bind it
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        unregisterReceiver(mUsbReceiver);
+        unbindService(usbConnection);
+    }
+
+    private void startService(Class<?> service, ServiceConnection serviceConnection, Bundle extras) {
+        if (!UsbService.SERVICE_CONNECTED) {
+            Intent startService = new Intent(this, service);
+            if (extras != null && !extras.isEmpty()) {
+                Set<String> keys = extras.keySet();
+                for (String key : keys) {
+                    String extra = extras.getString(key);
+                    startService.putExtra(key, extra);
+                }
+            }
+            startService(startService);
+        }
+        Intent bindingIntent = new Intent(this, service);
+        bindService(bindingIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    private void setFilters() {
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(UsbService.ACTION_USB_PERMISSION_GRANTED);
+        filter.addAction(UsbService.ACTION_NO_USB);
+        filter.addAction(UsbService.ACTION_USB_DISCONNECTED);
+        filter.addAction(UsbService.ACTION_USB_NOT_SUPPORTED);
+        filter.addAction(UsbService.ACTION_USB_PERMISSION_NOT_GRANTED);
+        registerReceiver(mUsbReceiver, filter);
+    }
+
+    private static class MyHandler extends Handler {
+        private final WeakReference<MainActivity> mActivity;
+
+        public MyHandler(MainActivity activity) {
+            mActivity = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case UsbService.MESSAGE_FROM_SERIAL_PORT:
+                    String data = (String) msg.obj;
+                    mActivity.get().textview.append(data);
+                    break;
+                case UsbService.CTS_CHANGE:
+                    Toast.makeText(mActivity.get(), "CTS_CHANGE",Toast.LENGTH_LONG).show();
+                    break;
+                case UsbService.DSR_CHANGE:
+                    Toast.makeText(mActivity.get(), "DSR_CHANGE",Toast.LENGTH_LONG).show();
+                    break;
+            }
         }
     }
-    */
 
 
     public class MyLocationListener implements LocationListener {
