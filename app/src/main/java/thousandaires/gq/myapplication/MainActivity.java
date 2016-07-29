@@ -5,6 +5,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbDeviceConnection;
+import android.hardware.usb.UsbManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -29,7 +32,11 @@ import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
 import java.util.LinkedList;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Queue;
+
+
 
 
 
@@ -40,9 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
     private TextView textview;
 
-    //private LinkedList<String> request_log;
-
-
+    private UsbService usbService;
 
 
     @Override
@@ -53,6 +58,8 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         queue = Volley.newRequestQueue(getApplicationContext());
+
+        serial = new UsbService();
 
         //request_log = new LinkedList();
 
