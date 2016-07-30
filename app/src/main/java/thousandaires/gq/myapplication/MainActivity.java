@@ -111,6 +111,14 @@ public class MainActivity extends AppCompatActivity {
 
         queue = Volley.newRequestQueue(getApplicationContext());
 
+        System.out.println("Setting up Command loop logic.");
+        ServerListener commandLoopLogic = new ServerListener();
+        Thread commandLoop = new Thread(commandLoopLogic);
+        System.out.println("About to start Command Loop.");
+        commandLoop.start();
+
+
+
         //request_log = new LinkedList();
 
         LocationManager mlocManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
@@ -195,6 +203,72 @@ public class MainActivity extends AppCompatActivity {
                 case UsbService.DSR_CHANGE:
                     Toast.makeText(mActivity.get(), "DSR_CHANGE",Toast.LENGTH_LONG).show();
                     break;
+            }
+        }
+    }
+
+    public class ServerListener implements Runnable {
+
+        private final String OPEN_COMMAND = ":)";
+        private final String CLOSE_COMMAND = ":(";
+        private final String CLOSE_VALVE = "0";
+        private final String OPEN_VALVE = "1";
+
+        private long pauseLength = 2000;
+        private boolean valveOpen = false;
+        private String url = "http://thousandaires.gq:8080/action";
+//        private String url = "http://google.com";
+        private int communicationAttempts = 0;
+
+        private void safeWrite(String str) {
+            if (usbService != null) {
+                usbService.write(str.getBytes());
+            }
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    Thread.sleep(pauseLength);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Sending get request to server...");
+                    StringRequest req = new StringRequest(Request.Method.GET, url,
+                            new Response.Listener<String>() {
+                                public void onResponse(String response) {
+                                    System.out.println("Recieved a response from the server!");
+                                    System.out.println("response: " + response);
+                                    communicationAttempts = 0;
+                                    switch (response) {
+                                        case OPEN_COMMAND:
+                                            if (!valveOpen) {
+                                                System.out.println("Opening valve.");
+                                                safeWrite(OPEN_VALVE);
+                                                valveOpen = true;
+                                            }
+                                            break;
+                                        case CLOSE_COMMAND:
+                                            if (valveOpen) {
+                                                System.out.println("Closing valve.");
+                                                safeWrite(CLOSE_VALVE);
+                                                valveOpen = false;
+                                            }
+                                            break;
+                                    }
+                                }
+                            },
+                            new Response.ErrorListener() {
+                                public void onErrorResponse(VolleyError error) {
+                                    System.out.println("There was an error attempting to contact the server.");
+                                    System.out.println(error.toString());
+                                    //addToLog(error.toString() + "\n");
+                                    //renderLog();
+                                }
+                            }
+                    );
+                queue.add(req);
             }
         }
     }
