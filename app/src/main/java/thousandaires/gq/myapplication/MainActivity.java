@@ -109,22 +109,30 @@ public class MainActivity extends AppCompatActivity {
 
         mHandler = new MyHandler(this);
 
+        System.out.println("");
+
         queue = Volley.newRequestQueue(getApplicationContext());
+
 
         System.out.println("Setting up Command loop logic.");
         ServerListener commandLoopLogic = new ServerListener();
         Thread commandLoop = new Thread(commandLoopLogic);
-        System.out.println("About to start Command Loop.");
-        commandLoop.start();
+//        System.out.println("About to start Command Loop.");
+//        commandLoop.start();
 
 
 
         //request_log = new LinkedList();
 
+        System.out.println("Creating new Location Manager.");
         LocationManager mlocManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        System.out.println("Creating new Location Listener");
         LocationListener mlocListener = new MyLocationListener();
+        System.out.println("Start the process to request location updates.");
         try {
+            System.out.println("Checking Permissions");
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                System.out.println("NOT ALLOWED!");
                 // TODO: Consider calling
                 //    ActivityCompat#requestPermissions
                 // here to request the missing permissions, and then overriding
@@ -134,11 +142,13 @@ public class MainActivity extends AppCompatActivity {
                 // for ActivityCompat#requestPermissions for more details.
                 return;
             }
+            System.out.println("Requesting updates");
             mlocManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mlocListener);
+            System.out.println("Successfully started requesting updates!");
         } catch(Exception e) {
             System.out.println("permissions error with location updates" + e.toString());
         }
-
+        System.out.println("Setting values in the text view!");
         textview = (TextView)findViewById(R.id.textview);
 
     }
