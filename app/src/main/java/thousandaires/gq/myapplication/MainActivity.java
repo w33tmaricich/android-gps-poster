@@ -80,31 +80,31 @@ public class MainActivity extends AppCompatActivity {
         commandLoop.start();
 
 
-//        System.out.println("Creating new Location Manager.");
-//        LocationManager mlocManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-//        System.out.println("Creating new Location Listener");
-//        LocationListener mlocListener = new MyLocationListener();
-//        System.out.println("Start the process to request location updates.");
-//        try {
-//            System.out.println("Checking Permissions");
-//            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-//                System.out.println("NOT ALLOWED!");
-//                // TODO: Consider calling
-//                //    ActivityCompat#requestPermissions
-//                // here to request the missing permissions, and then overriding
-//                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-//                //                                          int[] grantResults)
-//                // to handle the case where the user grants the permission. See the documentation
-//                // for ActivityCompat#requestPermissions for more details.
-//                return;
-//            }
-//            System.out.println("Requesting updates");
-//            mlocManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mlocListener);
-//            System.out.println("Successfully started requesting updates!");
-//        } catch(Exception e) {
-//            System.out.println("permissions error with location updates" + e.toString());
-//        }
-//        System.out.println("Setting values in the text view!");
+        System.out.println("Creating new Location Manager.");
+        LocationManager mlocManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        System.out.println("Creating new Location Listener");
+        LocationListener mlocListener = new MyLocationListener();
+        System.out.println("Start the process to request location updates.");
+        try {
+            System.out.println("Checking Permissions");
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                System.out.println("NOT ALLOWED!");
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return;
+            }
+            System.out.println("Requesting updates");
+            mlocManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mlocListener);
+            System.out.println("Successfully started requesting updates!");
+        } catch(Exception e) {
+            System.out.println("permissions error with location updates" + e.toString());
+        }
+        System.out.println("Setting values in the text view!");
         textview = (TextView)findViewById(R.id.textview);
 
     }
@@ -270,25 +270,25 @@ public class MainActivity extends AppCompatActivity {
                         StringRequest req = new StringRequest(Request.Method.GET, url,
                                 new Response.Listener<String>() {
                                     public void onResponse(String response) {
-                                        textviewPrint(response);
+//                                        textviewPrint(response);
                                         communicationAttempts = 0;
                                         switch (response) {
                                             case OPEN_COMMAND:
                                                 if (!valveOpen) {
-                                                    textviewPrint("Opening valve.");
+//                                                    textviewPrint("Opening valve.");
                                                 serialManager.send(OPEN_VALVE);
                                                     valveOpen = true;
                                                 }
                                                 break;
                                             case CLOSE_COMMAND:
                                                 if (valveOpen) {
-                                                    textviewPrint("Closing valve.");
+//                                                    textviewPrint("Closing valve.");
                                                 serialManager.send(CLOSE_VALVE);
                                                     valveOpen = false;
                                                 }
                                                 break;
                                             case PULSE_COMMAND:
-                                                textviewPrint("Changing valve status.");
+//                                                textviewPrint("Changing valve status.");
                                                 if (valveOpen)
                                                     serialManager.send(CLOSE_VALVE);
                                                 else
@@ -304,10 +304,10 @@ public class MainActivity extends AppCompatActivity {
                                         textviewPrint("There was an error attempting to contact the server.");
                                         System.out.println(error.toString());
                                         if (communicationAttempts >= MAX_FAILED_ATTEMPTS) {
-//                                        if (valveOpen)
-//                                            serialManager.sendOverSerial(CLOSE_VALVE);
-//                                        else
-//                                            serialManager.sendOverSerial(OPEN_VALVE);
+                                            if (valveOpen)
+                                                serialManager.send(CLOSE_VALVE);
+                                            else
+                                                serialManager.send(OPEN_VALVE);
                                             valveOpen = !valveOpen;
                                         }
                                     }
