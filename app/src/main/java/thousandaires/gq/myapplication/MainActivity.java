@@ -1,9 +1,11 @@
 package thousandaires.gq.myapplication;
 
 import android.Manifest;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.ComponentName;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
@@ -21,6 +23,7 @@ import android.os.Message;
 import android.preference.EditTextPreference;
 import android.preference.PreferenceManager;
 import android.support.v4.app.ActivityCompat;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -37,6 +40,8 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.felhr.usbserial.UsbSerialDevice;
+import com.felhr.usbserial.UsbSerialInterface;
 
 import java.lang.Thread;
 import java.lang.ref.WeakReference;
@@ -52,64 +57,18 @@ import static java.lang.Thread.*;
 
 public class MainActivity extends AppCompatActivity {
 
-    /*
-     * Notifications from UsbService will be received here.
-     */
-    private final BroadcastReceiver mUsbReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            switch (intent.getAction()) {
-                case UsbService.ACTION_USB_PERMISSION_GRANTED: // USB PERMISSION GRANTED
-                    Toast.makeText(context, "USB Ready", Toast.LENGTH_SHORT).show();
-                    break;
-                case UsbService.ACTION_USB_PERMISSION_NOT_GRANTED: // USB PERMISSION NOT GRANTED
-                    Toast.makeText(context, "USB Permission not granted", Toast.LENGTH_SHORT).show();
-                    break;
-                case UsbService.ACTION_NO_USB: // NO USB CONNECTED
-                    Toast.makeText(context, "No USB connected", Toast.LENGTH_SHORT).show();
-                    break;
-                case UsbService.ACTION_USB_DISCONNECTED: // USB DISCONNECTED
-                    Toast.makeText(context, "USB disconnected", Toast.LENGTH_SHORT).show();
-                    break;
-                case UsbService.ACTION_USB_NOT_SUPPORTED: // USB NOT SUPPORTED
-                    Toast.makeText(context, "USB device not supported", Toast.LENGTH_SHORT).show();
-                    break;
-            }
-        }
-    };
-    private UsbService usbService;
-
     public double latitude;
     public double longitude;
     public RequestQueue queue;
 
     private TextView textview;
 
-    private MyHandler mHandler;
-    private final ServiceConnection usbConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName arg0, IBinder arg1) {
-            usbService = ((UsbService.UsbBinder) arg1).getService();
-            usbService.setHandler(mHandler);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-            usbService = null;
-        }
-    };
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        System.out.println(usbService);
         super.onCreate(savedInstanceState);
 
         //ToggleButton toggle = (ToggleButton) findViewById(R.id.toggleButton);
         setContentView(R.layout.activity_main);
-
-        mHandler = new MyHandler(this);
-
-        System.out.println("");
 
         queue = Volley.newRequestQueue(getApplicationContext());
 
@@ -117,103 +76,163 @@ public class MainActivity extends AppCompatActivity {
         System.out.println("Setting up Command loop logic.");
         ServerListener commandLoopLogic = new ServerListener();
         Thread commandLoop = new Thread(commandLoopLogic);
-//        System.out.println("About to start Command Loop.");
-//        commandLoop.start();
+        System.out.println("About to start Command Loop.");
+        commandLoop.start();
 
 
-
-        //request_log = new LinkedList();
-
-        System.out.println("Creating new Location Manager.");
-        LocationManager mlocManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        System.out.println("Creating new Location Listener");
-        LocationListener mlocListener = new MyLocationListener();
-        System.out.println("Start the process to request location updates.");
-        try {
-            System.out.println("Checking Permissions");
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                System.out.println("NOT ALLOWED!");
-                // TODO: Consider calling
-                //    ActivityCompat#requestPermissions
-                // here to request the missing permissions, and then overriding
-                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                //                                          int[] grantResults)
-                // to handle the case where the user grants the permission. See the documentation
-                // for ActivityCompat#requestPermissions for more details.
-                return;
-            }
-            System.out.println("Requesting updates");
-            mlocManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mlocListener);
-            System.out.println("Successfully started requesting updates!");
-        } catch(Exception e) {
-            System.out.println("permissions error with location updates" + e.toString());
-        }
-        System.out.println("Setting values in the text view!");
+//        System.out.println("Creating new Location Manager.");
+//        LocationManager mlocManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+//        System.out.println("Creating new Location Listener");
+//        LocationListener mlocListener = new MyLocationListener();
+//        System.out.println("Start the process to request location updates.");
+//        try {
+//            System.out.println("Checking Permissions");
+//            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+//                System.out.println("NOT ALLOWED!");
+//                // TODO: Consider calling
+//                //    ActivityCompat#requestPermissions
+//                // here to request the missing permissions, and then overriding
+//                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+//                //                                          int[] grantResults)
+//                // to handle the case where the user grants the permission. See the documentation
+//                // for ActivityCompat#requestPermissions for more details.
+//                return;
+//            }
+//            System.out.println("Requesting updates");
+//            mlocManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, mlocListener);
+//            System.out.println("Successfully started requesting updates!");
+//        } catch(Exception e) {
+//            System.out.println("permissions error with location updates" + e.toString());
+//        }
+//        System.out.println("Setting values in the text view!");
         textview = (TextView)findViewById(R.id.textview);
 
     }
 
-    @Override
-    public void onResume() {
-        super.onResume();
-        setFilters();  // Start listening notifications from UsbService
-        startService(UsbService.class, usbConnection, null); // Start UsbService(if it was not started before) and Bind it
+    public void textviewPrint(String string) {
+        textview.setText(string);
     }
 
-    @Override
-    public void onPause() {
-        super.onPause();
-        unregisterReceiver(mUsbReceiver);
-        unbindService(usbConnection);
+    private void sleep(long time) {
+        try {
+            Thread.sleep(time);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void startService(Class<?> service, ServiceConnection serviceConnection, Bundle extras) {
-        if (!UsbService.SERVICE_CONNECTED) {
-            Intent startService = new Intent(this, service);
-            if (extras != null && !extras.isEmpty()) {
-                Set<String> keys = extras.keySet();
-                for (String key : keys) {
-                    String extra = extras.getString(key);
-                    startService.putExtra(key, extra);
+    public class SerialManager {
+
+        private final int BAUD_RATE = 9600;
+        private static final String ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION";
+
+        private UsbManager usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+        private UsbDevice device;
+        private UsbDeviceConnection connection;
+        private HashMap<String, UsbDevice> usbDevices;
+        private UsbSerialDevice serialPort;
+
+        private boolean connected;
+        private boolean pendingResponse;
+
+        private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent.getAction().equals(ACTION_USB_PERMISSION)) {
+                    boolean granted = intent.getExtras().getBoolean(UsbManager.EXTRA_PERMISSION_GRANTED);
+                    if(granted) {
+                        connection = usbManager.openDevice(device);
+                        if (connection != null) {
+
+                            serialPort = UsbSerialDevice.createUsbSerialDevice(device, connection);
+                            if (serialPort != null) {
+
+                                if (serialPort.open()) {
+
+                                    serialPort.setBaudRate(BAUD_RATE);
+                                    serialPort.setDataBits(UsbSerialInterface.DATA_BITS_8);
+                                    serialPort.setStopBits(UsbSerialInterface.STOP_BITS_1);
+                                    serialPort.setParity(UsbSerialInterface.PARITY_NONE);
+                                    serialPort.setFlowControl(UsbSerialInterface.FLOW_CONTROL_OFF);
+                                    textviewPrint("Successfully Configured!!!");
+                                    connected = true;
+                                } else {
+                                    // Serial port could not be opened, maybe an I/O error or it CDC driver was chosen it does not really fit
+                                    System.out.println("Serial port could not be opened.");
+                                }
+                            }
+                            connected = true;
+                        } else {
+                            textviewPrint("Crash here!");
+                        }
+                    }
                 }
             }
-            startService(startService);
-        }
-        Intent bindingIntent = new Intent(this, service);
-        bindService(bindingIntent, serviceConnection, Context.BIND_AUTO_CREATE);
-    }
+        };
 
-    private void setFilters() {
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(UsbService.ACTION_USB_PERMISSION_GRANTED);
-        filter.addAction(UsbService.ACTION_NO_USB);
-        filter.addAction(UsbService.ACTION_USB_DISCONNECTED);
-        filter.addAction(UsbService.ACTION_USB_NOT_SUPPORTED);
-        filter.addAction(UsbService.ACTION_USB_PERMISSION_NOT_GRANTED);
-        registerReceiver(mUsbReceiver, filter);
-    }
-
-    private static class MyHandler extends Handler {
-        private final WeakReference<MainActivity> mActivity;
-
-        public MyHandler(MainActivity activity) {
-            mActivity = new WeakReference<>(activity);
+        private void setFilter() {
+            IntentFilter filter = new IntentFilter();
+            filter.addAction(ACTION_USB_PERMISSION);
+            registerReceiver(broadcastReceiver, filter);
         }
 
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-                case UsbService.MESSAGE_FROM_SERIAL_PORT:
-                    String data = (String) msg.obj;
-                    mActivity.get().textview.append(data);
-                    break;
-                case UsbService.CTS_CHANGE:
-                    Toast.makeText(mActivity.get(), "CTS_CHANGE",Toast.LENGTH_LONG).show();
-                    break;
-                case UsbService.DSR_CHANGE:
-                    Toast.makeText(mActivity.get(), "DSR_CHANGE",Toast.LENGTH_LONG).show();
-                    break;
+        public SerialManager() {
+            connected = false;
+            pendingResponse = false;
+            setFilter();
+        }
+
+        public boolean isConnected() {
+            return connected;
+        }
+
+
+
+        private void attemptConnection() {
+            if(!this.isConnected() && !pendingResponse) {
+                sleep(1000);
+                usbDevices = usbManager.getDeviceList();
+                System.out.println("[SerialManager] usbDevices: " + !usbDevices.isEmpty() + " connected: " + connected);
+                if (!usbDevices.isEmpty() && !connected) {
+                    boolean keep = true;
+                    for (Map.Entry<String, UsbDevice> entry : usbDevices.entrySet()) {
+                        if (serialPort == null) {
+                            device = entry.getValue();
+                            int deviceVID = device.getVendorId();
+                            int devicePID = device.getProductId();
+                            if (deviceVID != 0x1d6b || (devicePID != 0x0001 || devicePID != 0x0002 || devicePID != 0x0003)) {
+                                // We are supposing here there is only one device connected and it is our serial device
+//                                sleep(5000);
+
+                                // get permission to use the device
+                                if (device == null) {
+                                    textviewPrint("Crash here!");
+                                }
+                                PendingIntent mPendingIntent = PendingIntent.getBroadcast(getApplicationContext(), 0, new Intent(ACTION_USB_PERMISSION), 0);
+                                pendingResponse = true;
+                                usbManager.requestPermission(device, mPendingIntent);
+
+                                keep = false;
+                            } else {
+                                connection = null;
+                                connected = false;
+                                device = null;
+                            }
+
+                            if (!keep)
+                                break;
+                        }
+                    }
+                }
+            } else {
+                sleep(1000);
             }
+        }
+
+
+
+        private void send(String string) {
+            serialPort.write(string.getBytes());
         }
     }
 
@@ -221,8 +240,10 @@ public class MainActivity extends AppCompatActivity {
 
         private final String OPEN_COMMAND = ":)";
         private final String CLOSE_COMMAND = ":(";
+        private final String PULSE_COMMAND = "RELAX";
         private final String CLOSE_VALVE = "0";
         private final String OPEN_VALVE = "1";
+        private final int MAX_FAILED_ATTEMPTS = 5;
 
         private long pauseLength = 2000;
         private boolean valveOpen = false;
@@ -230,55 +251,71 @@ public class MainActivity extends AppCompatActivity {
 //        private String url = "http://google.com";
         private int communicationAttempts = 0;
 
-        private void safeWrite(String str) {
-            if (usbService != null) {
-                usbService.write(str.getBytes());
-            }
-        }
+        private SerialManager serialManager = new SerialManager();
 
         @Override
         public void run() {
+            sleep(5000);
             while (true) {
-                try {
-                    Thread.sleep(pauseLength);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                //setup
+                while (!serialManager.isConnected()) {
+                    serialManager.attemptConnection();
                 }
-                System.out.println("Sending get request to server...");
-                    StringRequest req = new StringRequest(Request.Method.GET, url,
-                            new Response.Listener<String>() {
-                                public void onResponse(String response) {
-                                    System.out.println("Recieved a response from the server!");
-                                    System.out.println("response: " + response);
-                                    communicationAttempts = 0;
-                                    switch (response) {
-                                        case OPEN_COMMAND:
-                                            if (!valveOpen) {
-                                                System.out.println("Opening valve.");
-                                                safeWrite(OPEN_VALVE);
-                                                valveOpen = true;
-                                            }
-                                            break;
-                                        case CLOSE_COMMAND:
-                                            if (valveOpen) {
-                                                System.out.println("Closing valve.");
-                                                safeWrite(CLOSE_VALVE);
-                                                valveOpen = false;
-                                            }
-                                            break;
+                if (serialManager.isConnected()) {
+                    //loop
+                    while (serialManager.isConnected()) {
+
+                        sleep(pauseLength);
+//                    textviewPrint("Sending get request to server...");
+                        StringRequest req = new StringRequest(Request.Method.GET, url,
+                                new Response.Listener<String>() {
+                                    public void onResponse(String response) {
+                                        textviewPrint(response);
+                                        communicationAttempts = 0;
+                                        switch (response) {
+                                            case OPEN_COMMAND:
+                                                if (!valveOpen) {
+                                                    textviewPrint("Opening valve.");
+                                                serialManager.send(OPEN_VALVE);
+                                                    valveOpen = true;
+                                                }
+                                                break;
+                                            case CLOSE_COMMAND:
+                                                if (valveOpen) {
+                                                    textviewPrint("Closing valve.");
+                                                serialManager.send(CLOSE_VALVE);
+                                                    valveOpen = false;
+                                                }
+                                                break;
+                                            case PULSE_COMMAND:
+                                                textviewPrint("Changing valve status.");
+                                                if (valveOpen)
+                                                    serialManager.send(CLOSE_VALVE);
+                                                else
+                                                    serialManager.send(OPEN_VALVE);
+                                                valveOpen = !valveOpen;
+                                                break;
+                                        }
+                                    }
+                                },
+                                new Response.ErrorListener() {
+                                    public void onErrorResponse(VolleyError error) {
+                                        communicationAttempts++;
+                                        textviewPrint("There was an error attempting to contact the server.");
+                                        System.out.println(error.toString());
+                                        if (communicationAttempts >= MAX_FAILED_ATTEMPTS) {
+//                                        if (valveOpen)
+//                                            serialManager.sendOverSerial(CLOSE_VALVE);
+//                                        else
+//                                            serialManager.sendOverSerial(OPEN_VALVE);
+                                            valveOpen = !valveOpen;
+                                        }
                                     }
                                 }
-                            },
-                            new Response.ErrorListener() {
-                                public void onErrorResponse(VolleyError error) {
-                                    System.out.println("There was an error attempting to contact the server.");
-                                    System.out.println(error.toString());
-                                    //addToLog(error.toString() + "\n");
-                                    //renderLog();
-                                }
-                            }
-                    );
-                queue.add(req);
+                        );
+                        queue.add(req);
+                    }
+                }
             }
         }
     }
